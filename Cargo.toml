@@ -1,0 +1,19 @@
+[package]
+name = "html_executor"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["reqwest"]
+reqwest = ["dep:reqwest"]
+rquest = ["dep:rquest"]
+
+[dependencies]
+anyhow = "1.0.93"
+reqwest = { version = "0.12.9", optional = true }
+rquest = { version = "0.27.5", optional = true }
+thirtyfour = "0.34.0"
+tokio = { version = "1.41.1", features = ["time"] }
+async-trait = "0.1.83"
+log = "0.4.22"
+serde_json = "1.0.132"
