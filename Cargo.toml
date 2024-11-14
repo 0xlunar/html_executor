@@ -1,7 +1,10 @@
 [package]
 name = "html_executor"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
+description = "Execute JS rendered HTML from a request"
+license = "GPL-3"
+repository = "https://github.com/0xlunar/html_executor"
 
 [features]
 default = ["reqwest"]
