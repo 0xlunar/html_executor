@@ -21,7 +21,6 @@ pub trait HTMLRendererExt {
     /// **Defaults**
     /// - `chromedriver_url` defaults to `http://127.0.0.1:4444`
     /// - `output_delay` defaults to 2-Seconds
-    ///
     async fn render(self, chromedriver_url: Option<&str>, output_delay: Option<Duration>) -> anyhow::Result<String>;
 }
 
@@ -49,22 +48,19 @@ impl HTMLRendererExt for reqwest::Response {
     }
 }
 
-/// `html` should be the whole html response from a request
-///
-/// `url` should be at least the base url where the request is from,
-/// but depending on your use case could use any valid url.
-///
-/// `chromedriver_url` should be the address and port where the chromedriver is running.
-/// Default will be used if not set.
-///
-/// `output_delay` can be any duration, but it is recommended that a minimum of 2 seconds is used.
-/// Default will be used if not set.
 #[derive(Default, Debug)]
 pub struct RenderOptions<'a> {
+    /// should be the whole html response from a request
     pub html: &'a str,
+    /// should be at least the base url where the request is from,
+    /// but depending on your use case could use any valid url.
     pub url: &'a str,
     // user_agent: Option<&'a str>,
+    /// should be the address and port where the chromedriver is running.
+    /// Default will be used if not set.
     pub chromedriver_url: Option<&'a str>,
+    /// can be any duration, but it is recommended that a minimum of 2 seconds is used.
+    /// Default will be used if not set.
     pub output_delay: Option<Duration>,
 }
 
