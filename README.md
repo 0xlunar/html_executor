@@ -1,55 +1,31 @@
 # html_executor
 Execute Javascript from a given HTML page
 
-## Supported request libraries
-- [reqwest](https://crates.io/crates/reqwest)
-- [rquest](https://crates.io/crates/rquest)
+## Example
 
-## Examples
-**Reqwest**
 ```rust
-use html_executor::HTMLRendererExt;
-
-#[tokio::main]
-async fn main() {
-    let response = reqwest::get("https://example.com/").await.unwrap();
-    let rendered = response.render(None, None).await.unwrap();
-    
-    println!("{rendered}");
-}
-```
-**Rquest**
-```rust
-use html_executor::HTMLRendererExt;
-
-#[tokio::main]
-async fn main() {
-    let response = rquest::get("https://example.com/").await.unwrap();
-    let rendered = response.render(None, None).await.unwrap();
-    
-    println!("{rendered}");
-}
-```
-
-**Non-Request Format**
-```rust
-use html_executor::{render_html, RenderOptions};
+use std::time::Duration;
+use html_executor::{render_html, RenderOptions, DriverCapability};
 
 #[tokio::main]
 async fn main() {
     let response = reqwest::get("https://example.com/").await.unwrap();
     let url = response.url();
     let html = response.text().await.unwrap();
-    
+
     let options = RenderOptions {
-        html: html.as_str(),
+        html: Some(html.as_str()),
         url: url.as_str(),
-        chromedriver_url: None,
-        output_delay: None,
+        driver_url: None,
+        output_delay: Some(Duration::from_secs(5)),
+        driver_capability: DriverCapability::Chrome,
+        user_agent: None,
+        headless: true,
+        cookie_only: false,
     };
-    
+
     let rendered = render_html(options).await.unwrap();
-    
-    println!("{rendered}");
+
+    println!("{rendered:?}");
 }
 ```

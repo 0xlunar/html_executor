@@ -5,65 +5,9 @@ use thirtyfour::{
     CapabilitiesHelper, ChromiumLikeCapabilities, Cookie, PageLoadStrategy, WebDriver,
 };
 use tokio::time::Instant;
-#[cfg(all(feature = "wreq", not(feature = "reqwest")))]
-use wreq as reqwest;
 
-static CHROMEDRIVER_CONNECTION_URL: &str = "http://127.0.0.1:4444";
-#[async_trait::async_trait]
-pub trait HTMLRendererExt {
-    /// Render HTML from a response
-    ///
-    /// **Assumption**
-    /// - Using chromedriver
-    ///
-    /// **No Guarantees**
-    /// - Page may not finish rendering before output is given.
-    ///
-    /// **Defaults**
-    /// - `chromedriver_url` defaults to `http://127.0.0.1:4444`
-    /// - `output_delay` defaults to 2-Seconds
-    async fn render(
-        self,
-        chromedriver_url: Option<&str>,
-        output_delay: Option<Duration>,
-        driver_capability: DriverCapability,
-        user_agent: Option<&str>,
-        use_html: bool,
-        headless: bool,
-    ) -> anyhow::Result<RenderResults>;
-}
-
-#[async_trait::async_trait]
-impl HTMLRendererExt for reqwest::Response {
-    async fn render(
-        self,
-        chromedriver_url: Option<&str>,
-        output_delay: Option<Duration>,
-        driver_capability: DriverCapability,
-        user_agent: Option<&str>,
-        use_html: bool,
-        headless: bool,
-    ) -> anyhow::Result<RenderResults> {
-        let url = self.url().to_string();
-
-        let text = self.text().await?;
-        let text = if use_html { Some(&*text) } else { None };
-
-        let render_options = RenderOptions {
-            html: text,
-            url: url.as_str(),
-            driver_url: chromedriver_url,
-            output_delay,
-            driver_capability,
-            user_agent,
-            headless,
-            cookie_only: false,
-        };
-
-        let output = render_html(render_options).await?;
-        Ok(output)
-    }
-}
+const DEFAULT_DRIVER_URL: &str = "http://127.0.0.1:4444";
+const DEFAULT_OUTPUT_DELAY: Duration = Duration::from_secs(2);
 
 #[derive(Default, Debug)]
 pub struct RenderOptions<'a> {
@@ -119,8 +63,8 @@ pub enum DriverCapability {
 /// - `options.chromedriver_url` defaults to `http://127.0.0.1:4444`
 /// - `options.output_delay` defaults to 2-Seconds
 pub async fn render_html(options: RenderOptions<'_>) -> anyhow::Result<RenderResults> {
-    let chromedriver_url = options.driver_url.unwrap_or(CHROMEDRIVER_CONNECTION_URL);
-    let output_delay = options.output_delay.unwrap_or(Duration::from_secs(2));
+    let chromedriver_url = options.driver_url.unwrap_or(DEFAULT_DRIVER_URL);
+    let output_delay = options.output_delay.unwrap_or(DEFAULT_OUTPUT_DELAY);
 
     let browser = match options.driver_capability {
         DriverCapability::Chrome => {
@@ -143,9 +87,7 @@ pub async fn render_html(options: RenderOptions<'_>) -> anyhow::Result<RenderRes
                 let ua = format!("--user-agent={}", ua);
                 caps.add_arg(&ua)?;
             }
-
-            // caps.add_arg("--incognito")?;
-            // caps.add_arg("--disable-plugins-discovery")?;
+            
             caps.add_experimental_option("excludeSwitches", vec!["enable-automation"])?;
             WebDriver::new(chromedriver_url, caps).await?
         }
@@ -166,11 +108,10 @@ pub async fn render_html(options: RenderOptions<'_>) -> anyhow::Result<RenderRes
         }
     };
 
-    // let browser = WebDriver::new(chromedriver_url, caps).await?;
     browser.goto(options.url).await?;
-    // Only works if ran before the page has loaded, otherwise renderer freezes up.
-    // Replaces entire content of page with our own HTML
     if let Some(html) = options.html {
+        // Only works if ran before the page has loaded, otherwise renderer freezes up.
+        // Replaces entire content of page with our own HTML
         browser
             .execute(
                 r#"
@@ -183,11 +124,10 @@ pub async fn render_html(options: RenderOptions<'_>) -> anyhow::Result<RenderRes
 
     tokio::time::sleep_until(Instant::now() + output_delay).await;
 
-    // Check to ensure the renderer hasn't frozen up
-    let mut interval = tokio::time::interval(Duration::from_secs(15));
-    interval.tick().await; // Should immediately tick
-
     let html = if !options.cookie_only {
+        // Check to ensure the renderer hasn't frozen up
+        let mut interval = tokio::time::interval(Duration::from_secs(15));
+        interval.tick().await; // Should immediately tick
         if let Some(val) = tokio::select! {
             Ok(val) = browser.source() => {
                 Some(val)
